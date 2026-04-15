@@ -1,371 +1,200 @@
-# Go 项目设计与代码风格约定
+# Go Coding & Design Rules (for AI / Copilot)
 
-> 本项目遵循 **Unix 风格 + Go Idiomatic 风格**。
-> 所有代码（包括 AI 生成代码）必须符合以下约定。
+> All generated code must follow these rules.
 
 ---
 
-# 一、核心设计原则
+# 1. Core Philosophy
 
-## 1. Unix 风格（强制）
+* Follow **Unix philosophy**
+* Follow **Go idioms**
+* Prefer **simple, explicit, composable design**
 
-* 每个函数/模块 **只做一件事**
-* 优先使用 **小接口**
-* 优先 **组合（composition）而不是继承**
-* 面向数据流（`io.Reader` / `io.Writer`）
-* 所有组件应 **可组合（composable）**
+---
 
-示例：
+# 2. Unix-style Design (MANDATORY)
+
+* Do one thing well
+* Prefer small, focused functions
+* Prefer composition over large abstractions
+* Design for composability
+
+Preferred:
 
 ```go
 func Process(r io.Reader, w io.Writer) error
 ```
 
-避免：
+Avoid:
 
 ```go
-func ProcessFile(path string)
+func ProcessFile(path string) ([]byte, error)
 ```
 
 ---
 
-## 2. 单一职责（Single Responsibility）
+# 3. Interfaces
 
-* 一个函数只负责一个明确逻辑
-* 一个 struct 不承载多个业务领域
+* Keep interfaces **small (1–2 methods)**
+* Define interfaces at **usage side**
+* Use `-er` naming for single-method interfaces
 
----
-
-## 3. 明确边界（Separation of Concerns）
-
-分层建议：
-
-```
-handler → service → repository
-```
-
-禁止：
-
-* handler 直接操作数据库
-* service 写 HTTP 逻辑
-
----
-
-# 二、接口设计规范
-
-## 1. 小接口原则（强制）
+Good:
 
 ```go
-type Reader interface {
-    Read([]byte) (int, error)
-}
-```
-
-避免：
-
-```go
-type MegaInterface interface {
-    Read()
-    Write()
-    Close()
-    Process()
-}
-```
-
----
-
-## 2. 接口定义在“使用方”
-
-```go
-// good
 type Store interface {
     Save(User) error
 }
 ```
 
-不要在实现包定义接口。
-
----
-
-## 3. 接口命名
-
-* 单方法接口：`-er` 后缀
+Bad:
 
 ```go
-Reader
-Writer
-Closer
-```
-
----
-
-# 三、错误处理规范
-
-## 1. 显式错误返回（强制）
-
-```go
-if err != nil {
-    return err
+type Service interface {
+    Create()
+    Update()
+    Delete()
+    Send()
 }
 ```
 
-禁止：
-
-* panic 作为业务流程
-* 忽略错误
-
 ---
 
-## 2. 错误要有上下文
+# 4. Error Handling
+
+* Always handle errors explicitly
+* Never ignore errors
+* Wrap errors with context
 
 ```go
-return fmt.Errorf("create user failed: %w", err)
+if err != nil {
+    return fmt.Errorf("create user: %w", err)
+}
 ```
 
 ---
 
-## 3. 不要吞掉错误
+# 5. Functions
 
-```go
-_ = doSomething() ❌
-```
-
----
-
-# 四、函数设计规范
-
-## 1. 函数应短小
-
-建议：
-
-```text
-≤ 50 行
-```
+* Must be small and focused
+* Prefer ≤ 50 lines
+* Prefer ≤ 3 parameters
+* One responsibility per function
 
 ---
 
-## 2. 参数不要过多
+# 6. Struct Design
 
-建议：
+* Avoid "God struct"
+* Use composition
+* Avoid `interface{}` unless necessary
 
-```text
-≤ 3 个参数
-```
-
-否则使用 struct。
-
----
-
-## 3. 返回值尽量简单
-
-避免：
-
-```go
-func Do() (a, b, c, d, e, f int)
-```
-
----
-
-# 五、结构体设计
-
-## 1. 避免 God Struct
+Bad:
 
 ```go
 type App struct {
     DB
     Redis
     Logger
-    Config
-}
-```
-
-应拆分。
-
----
-
-## 2. 使用组合而不是继承
-
-```go
-type Service struct {
-    repo Repository
 }
 ```
 
 ---
 
-## 3. 字段必须有明确含义
+# 7. Data Flow
 
-避免：
+* Prefer `io.Reader` / `io.Writer`
+* Avoid hardcoded file paths or global state
+
+---
+
+# 8. Concurrency
+
+* Do not start goroutines without control
+* All goroutines must be cancelable
+* Always use `context.Context`
 
 ```go
-Data interface{}
+func Run(ctx context.Context)
 ```
 
 ---
 
-# 六、命名规范
+# 9. Channels
 
-## 1. 包名
-
-* 小写
-* 无下划线
-* 简短
-
-```text
-user, auth, repo
-```
+* Default: unbuffered or size 1
+* Avoid complex channel orchestration
 
 ---
 
-## 2. 变量名
+# 10. Time Handling
 
-* 短但语义清晰
+* Use `time.Time` and `time.Duration`
+* Never use `int` for time
+
+---
+
+# 11. init()
+
+* Avoid `init()` unless absolutely necessary
+
+---
+
+# 12. main()
+
+* Keep `main()` minimal
+* Do not put business logic in `main`
+
+---
+
+# 13. Logging
+
+* Use structured logging (e.g. slog)
+* Do not use `fmt.Println`
+
+---
+
+# 14. JSON / API
+
+* Use explicit struct fields
+* Avoid `map[string]interface{}`
+
+---
+
+# 15. Data Safety (Uber practice)
+
+* Do not expose internal mutable slices/maps
+* Copy at boundaries when needed
 
 ```go
-id, err, ctx
+return append([]T(nil), data...)
 ```
 
 ---
 
-## 3. 避免冗余
+# 16. General Rules
 
-```go
-user.UserService ❌
-```
-
----
-
-# 七、并发规范
-
-## 1. 不要滥用 goroutine
-
-只在需要时使用。
+* No global mutable state
+* No hidden side effects
+* Prefer explicit over implicit
+* Prefer readability over cleverness
 
 ---
 
-## 2. 必须可控
+# 17. Copilot Instructions (IMPORTANT)
 
-* 使用 context
-* 可取消
+When generating code, always:
 
----
-
-## 3. 避免 goroutine 泄漏
-
-必须：
-
-```go
-select {
-case <-ctx.Done():
-    return
-}
-```
+* Use small interfaces
+* Avoid large abstractions
+* Avoid unnecessary layers
+* Avoid unused code
+* Avoid over-engineering
+* Prefer idiomatic Go
+* Prefer composable design
 
 ---
 
-# 八、Context 使用规范
+# 18. Guiding Principle
 
-## 1. 必须作为第一个参数
-
-```go
-func Do(ctx context.Context)
-```
-
----
-
-## 2. 不要存入 struct
-
----
-
-## 3. 不要滥用 Value
-
----
-
-# 九、日志规范
-
-## 1. 使用结构化日志
-
-```go
-slog.Info("create user", "user_id", id)
-```
-
----
-
-## 2. 不要用 fmt.Println
-
----
-
-# 十、JSON / API 规范
-
-## 1. 明确字段
-
-```go
-Name string `json:"name"`
-```
-
----
-
-## 2. 避免 interface{}
-
----
-
-## 3. 时间统一格式（RFC3339）
-
----
-
-# 十一、依赖管理
-
-## 1. 禁止随意 replace
-
-仅用于：
-
-* 本地开发
-* 临时调试
-
----
-
-## 2. 必须固定版本
-
-```go
-require xxx v1.x.x
-```
-
----
-
-# 十二、测试规范
-
-## 1. 必须可测试（Testable）
-
-* 依赖注入
-* 不依赖全局变量
-
----
-
-## 2. 使用 mock
-
----
-
-## 3. 测试命名
-
-```go
-TestCreateUser
-```
-
----
-
-# 十三、Copilot 使用约束（重点）
-
-Copilot 生成代码必须符合：
-
-* 小接口
-* 不生成 God Object
-* 不使用全局变量
-* 不写过长函数
-* 不忽略错误
-* 不引入不必要依赖
-
----
-
-# 🧠 一句话原则
-
-> 写可以被组合的代码，而不是只能被使用一次的代码。
+> Write code that is easy to compose, test, and reason about.
