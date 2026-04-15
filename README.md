@@ -1,3 +1,5 @@
+##### Translate to: [简体中文](README_zh.md)
+
 # Go Coding & Design Rules (for AI / Copilot)
 
 > All generated code must follow these rules.
